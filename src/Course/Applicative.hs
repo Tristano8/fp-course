@@ -336,7 +336,8 @@ replicateA ::
   Int
   -> f a
   -> f (List a)
-replicateA = (<$>) . replicate
+replicateA n fa = sequence (replicate n fa)
+-- (<$>) . replicate will typecheck but will only replicate once for each list item
 
 -- | Filter a list with a predicate that produces an effect.
 --
