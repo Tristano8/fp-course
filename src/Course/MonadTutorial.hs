@@ -448,4 +448,22 @@ class BindAndPure f where
   pure ::
     a
     -> f a
-    
+
+
+generalSequence :: BindAndPure f => [f a] -> f [a]
+generalSequence =
+  foldr (\a as ->
+    bind (\a' ->
+      bind (\as' ->
+        pure (a' : as')) as) a)
+        (pure [])
+
+-- The above can be rewritten in standard Haskell as
+-- sequence = foldr (\a as -> (\a' -> (\as' -> pure (a' : as')) =<< as) =<< a
+-- or, using standard >>=,
+-- sequence = foldr (\a as -> a >>= (\a' -> as >>= \as' -> pure (a' : as'))) (pure [])
+-- or, using do notation
+-- sequence = foldr (\fa fas -> do
+--                     a <- fa       
+--                     as <- fas
+--                     return (a : as) (return [])
