@@ -38,7 +38,7 @@ exec ::
   State s a
   -> s
   -> s
-exec ssa = snd . (runState ssa)
+exec ssa = snd . runState ssa
 
 -- | Run the `State` seeded with `s` and retrieve the resulting value.
 --
@@ -47,7 +47,7 @@ eval ::
   State s a
   -> s
   -> a
-eval ssa = fst . (runState ssa)
+eval ssa = fst . runState ssa
 
 -- | A `State` where the state also distributes into the produced value.
 --
@@ -134,8 +134,8 @@ findM ::
   (a -> f Bool)
   -> List a
   -> f (Optional a)
-findM =
-  error "todo: Course.State#findM"
+findM p = foldRight (\a foa -> let fbool = p a
+                                     in lift2 (\a' oa -> if a' then Full a else oa) fbool foa) (pure Empty)
 
 -- | Find the first element in a `List` that repeats.
 -- It is possible that no element repeats, hence an `Optional` result.
