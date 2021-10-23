@@ -144,12 +144,14 @@ findM p = foldRight (\a foa -> let fbool = p a
 --
 -- prop> \xs -> case firstRepeat xs of Empty -> let xs' = hlist xs in nub xs' == xs'; Full x -> length (filter (== x) xs) > 1
 -- prop> \xs -> case firstRepeat xs of Empty -> True; Full x -> let (l, (rx :. rs)) = span (/= x) xs in let (l2, r2) = span (/= x) rs in let l3 = hlist (l ++ (rx :. Nil) ++ l2) in nub l3 == l3
+-- member :: a -> Set a -> Bool
+-- findM with State (Set a) Bool returns a State (Set a) (Optional Bool)
+-- eval gives back the Optional Bool
 firstRepeat ::
   Ord a =>
   List a
   -> Optional a
-firstRepeat =
-  error "todo: Course.State#firstRepeat"
+firstRepeat xs = eval (findM (\a -> State (\s -> (S.member a s, S.insert a s))) xs) S.empty 
 
 -- | Remove all duplicate elements in a `List`.
 -- /Tip:/ Use `filtering` and `State` with a @Data.Set#Set@.
@@ -157,12 +159,12 @@ firstRepeat =
 -- prop> \xs -> firstRepeat (distinct xs) == Empty
 --
 -- prop> \xs -> distinct xs == distinct (flatMap (\x -> x :. x :. Nil) xs)
+-- filtering :: Applicative f = (a -> f Bool) -> List a -> f (List a)
 distinct ::
   Ord a =>
   List a
   -> List a
-distinct =
-  error "todo: Course.State#distinct"
+distinct xs = eval (filtering (\a -> State (\s -> (S.notMember a s, S.insert a s))) xs) S.empty
 
 -- | A happy number is a positive integer, where the sum of the square of its digits eventually reaches 1 after repetition.
 -- In contrast, a sad number (not a happy number) is where the sum of the square of its digits never reaches 1
@@ -185,8 +187,18 @@ distinct =
 --
 -- >>> isHappy 44
 -- True
+
+-- produce :: (a -> a) -> a -> List a
+-- join :: f (f a) -> f a
+-- join :: (->) t ((->) t a) -> (->) t a
+-- infix style is  (t -> t -> a) -> t -> a
+-- So join for functions is join f t = f t t, or double application of the argument t
+
+square :: Num a => a -> a
+square = join (*)
+
 isHappy ::
   Integer
   -> Bool
-isHappy =
-  error "todo: Course.State#isHappy"
+isHappy n = let xs = firstRepeat $ produce (\n' -> toInteger $ sum (square . digitToInt <$> show' n')) n in
+  contains 1 xs
