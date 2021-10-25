@@ -192,8 +192,8 @@ distinctF ::
   (Ord a, Num a) =>
   List a
   -> Optional (List a)
-distinctF =
-  error "todo: Course.StateT#distinctF"
+distinctF xs = evalT (filtering (\a -> StateT (\s -> if a > 100 then Empty else Full (S.notMember a s, S.insert a s))) xs) S.empty
+
 
 -- | An `OptionalT` is a functor of an `Optional` value.
 data OptionalT f a =
@@ -206,9 +206,10 @@ data OptionalT f a =
 --
 -- >>> runOptionalT $ (+1) <$> OptionalT (Full 1 :. Empty :. Nil)
 -- [Full 2,Empty]
+
+-- a -> b -> OptionalT f a -> OptionalT f b
 instance Functor f => Functor (OptionalT f) where
-  (<$>) =
-    error "todo: Course.StateT (<$>)#instance (OptionalT f)"
+  (<$>) f fa = OptionalT $ (f <$>) <$> runOptionalT fa
 
 -- | Implement the `Applicative` instance for `OptionalT f` given a Monad f.
 --
@@ -235,18 +236,22 @@ instance Functor f => Functor (OptionalT f) where
 -- >>> runOptionalT $ OptionalT (Full (+1) :. Full (+2) :. Nil) <*> OptionalT (Full 1 :. Empty :. Nil)
 -- [Full 2,Empty,Full 3,Empty]
 instance Monad f => Applicative (OptionalT f) where
-  pure =
-    error "todo: Course.StateT pure#instance (OptionalT f)"
-  (<*>) =
-    error "todo: Course.StateT (<*>)#instance (OptionalT f)"
+  -- a -> OptionalT f a
+  pure = OptionalT . pure . pure
+  -- OptionalT (a -> b) -> OptionalT f a -> OptionalT f b
+  (<*>) fab otfa = OptionalT $ lift2 (<*>) (runOptionalT fab) (runOptionalT otfa)
+
+  -- These are a more specific version of Compose
 
 -- | Implement the `Monad` instance for `OptionalT f` given a Monad f.
 --
 -- >>> runOptionalT $ (\a -> OptionalT (Full (a+1) :. Full (a+2) :. Nil)) =<< OptionalT (Full 1 :. Empty :. Nil)
 -- [Full 2,Full 3,Empty]
+-- a -> OptionalT f a -> OptionalT f b
 instance Monad f => Monad (OptionalT f) where
-  (=<<) =
-    error "todo: Course.StateT (=<<)#instance (OptionalT f)"
+  (=<<) f otfa = OptionalT $ runOptionalT otfa >>= \oa -> case oa of
+                                      Full a -> runOptionalT (f a)
+                                      Empty -> pure Empty
 
 -- | A `Logger` is a pair of a list of log values (`[l]`) and an arbitrary value (`a`).
 data Logger l a =
@@ -258,8 +263,7 @@ data Logger l a =
 -- >>> (+3) <$> Logger (listh [1,2]) 3
 -- Logger [1,2] 6
 instance Functor (Logger l) where
-  (<$>) =
-    error "todo: Course.StateT (<$>)#instance (Logger l)"
+  (<$>) f (Logger xs a) = Logger xs (f a)
 
 -- | Implement the `Applicative` instance for `Logger`.
 --
@@ -269,10 +273,8 @@ instance Functor (Logger l) where
 -- >>> Logger (listh [1,2]) (+7) <*> Logger (listh [3,4]) 3
 -- Logger [1,2,3,4] 10
 instance Applicative (Logger l) where
-  pure =
-    error "todo: Course.StateT pure#instance (Logger l)"
-  (<*>) =
-    error "todo: Course.StateT (<*>)#instance (Logger l)"
+  pure = Logger Nil
+  (<*>) (Logger xs ab) (Logger ys a) = Logger (xs ++ ys) (ab a)
 
 -- | Implement the `Monad` instance for `Logger`.
 -- The `bind` implementation must append log values to maintain associativity.
@@ -280,8 +282,7 @@ instance Applicative (Logger l) where
 -- >>> (\a -> Logger (listh [4,5]) (a+3)) =<< Logger (listh [1,2]) 3
 -- Logger [1,2,4,5] 6
 instance Monad (Logger l) where
-  (=<<) =
-    error "todo: Course.StateT (=<<)#instance (Logger l)"
+  (=<<) afb (Logger xs a) = Logger xs id <*> afb a
 
 -- | A utility function for producing a `Logger` with one log value.
 --
@@ -291,8 +292,7 @@ log1 ::
   l
   -> a
   -> Logger l a
-log1 =
-  error "todo: Course.StateT#log1"
+log1 = Logger . flip (:.) Nil
 
 -- | Remove all duplicate integers from a list. Produce a log as you go.
 -- If there is an element above 100, then abort the entire computation and produce no result.
@@ -312,8 +312,16 @@ distinctG ::
   (Integral a, Show a) =>
   List a
   -> Logger Chars (Optional (List a))
-distinctG =
-  error "todo: Course.StateT#distinctG"
+distinctG xs = runOptionalT (evalT (filtering (
+  \a -> StateT (
+    \s -> OptionalT (
+      if a > 100
+      then log1 ("aborting > 100: " ++ show' a) Empty
+      else
+        (if even a
+        then log1 ("even number: " ++ show' a)
+        else pure) (Full (S.notMember a s, S.insert a s)))
+      )) xs) S.empty)
 
 onFull ::
   Applicative f =>
