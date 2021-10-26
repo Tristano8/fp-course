@@ -120,12 +120,12 @@ spec = do
         let
           ot =
             OptionalT (Empty :. Nil) <*> OptionalT (Full 1 :. Full 2 :. Nil)
-        runOptionalT ot `shouldBe` (Empty :. Nil :: List (Optional Int))
+        runOptionalT ot `shouldBe` (Empty :. Empty :. Nil :: List (Optional Int))
       it "six" $ do
         let
           ot =
             OptionalT (Full (+1) :. Empty :. Nil) <*> OptionalT (Full 1 :. Full 2 :. Nil)
-        runOptionalT ot `shouldBe` (Full 2 :. Full 3 :. Empty :. Nil)
+        runOptionalT ot `shouldBe` (Full 2 :. Full 3 :. Empty :. Empty :. Nil)
       it "seven" $ do
         let
           ot =

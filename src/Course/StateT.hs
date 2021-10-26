@@ -101,7 +101,7 @@ type State' s a =
 state' ::
   (s -> (a, s))
   -> State' s a
-state' sas = StateT (\s -> ExactlyOne $ sas s)
+state' = StateT . (ExactlyOne .)
 
 -- | Provide an unwrapper for `State'` values.
 --
@@ -196,7 +196,7 @@ distinctF xs = evalT (filtering (\a -> StateT (\s -> if a > 100 then Empty else 
 
 
 -- | An `OptionalT` is a functor of an `Optional` value.
-data OptionalT f a =
+newtype OptionalT f a =
   OptionalT {
     runOptionalT ::
       f (Optional a)
