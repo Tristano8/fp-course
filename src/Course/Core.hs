@@ -12,6 +12,7 @@ module Course.Core(
 , Fractional(..)
 , Bool(..)
 , Either(..)
+, Ordering(..)
 , Int
 , Integer
 , IO
@@ -57,6 +58,7 @@ import Prelude(
   , Fractional(..)
   , Bool(..)
   , Either(..)
+  , Ordering(..)
   , Char
   , Int
   , Integer
