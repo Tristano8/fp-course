@@ -45,8 +45,7 @@ instance Traversable ExactlyOne where
     (a -> f b)
     -> ExactlyOne a
     -> f (ExactlyOne b)
-  traverse =
-    error "todo: Course.Traversable traverse#instance ExactlyOne"
+  traverse afb eo = ExactlyOne <$> afb (runExactlyOne eo)
 
 instance Traversable Optional where
   traverse ::
@@ -54,8 +53,8 @@ instance Traversable Optional where
     (a -> f b)
     -> Optional a
     -> f (Optional b)
-  traverse =
-    error "todo: Course.Traversable traverse#instance Optional"
+  traverse afb (Full a) = Full <$> afb a
+  traverse _ _ = pure Empty
 
 -- | Sequences a traversable value of structures to a structure of a traversable value.
 --
@@ -71,14 +70,16 @@ sequenceA ::
   (Applicative f, Traversable t) =>
   t (f a)
   -> f (t a)
-sequenceA =
-  error "todo: Course.Traversable#sequenceA"
+sequenceA = traverse id
 
+-- traverse afb -- has the type f a -> h (f b)
+-- traverse (f a -> h (f b)) :: g (f b) -> h (f (g b))
 instance (Traversable f, Traversable g) =>
   Traversable (Compose f g) where
 -- Implement the traverse function for a Traversable instance for Compose
-  traverse =
-    error "todo: Course.Traversable traverse#instance (Compose f g)"
+  traverse :: Applicative h => (a -> h b) -> Compose f g a -> h (Compose f g b)
+  traverse afb (Compose fg) = Compose <$> traverse (traverse afb) fg
+  -- can also be written as Compose <$> (traverse . traverse) afb fg
 
 -- | The `Product` data type contains one value from each of the two type constructors.
 data Product f g a =
@@ -87,14 +88,20 @@ data Product f g a =
 instance (Functor f, Functor g) =>
   Functor (Product f g) where
 -- Implement the (<$>) function for a Functor instance for Product
-  (<$>) =
-    error "todo: Course.Traversable (<$>)#instance (Product f g)"
+  (<$>) :: (Functor f, Functor g) => (a -> b) -> Product f g a -> Product f g b
+  (<$>) ab (Product f g) = Product (ab <$> f) (ab <$> g)
 
 instance (Traversable f, Traversable g) =>
   Traversable (Product f g) where
 -- Implement the traverse function for a Traversable instance for Product
-  traverse =
-    error "todo: Course.Traversable traverse#instance (Product f g)"
+  traverse :: (Applicative h, Functor f, Functor g) => (a -> h b) -> Product f g a -> h (Product f g b)
+  traverse ahb (Product f g) = 
+                              -- traverse ahb f :: h (f b)
+                              -- traverse ahb g :: h (g b)
+                              -- lift2 gives (f b -> g b -> c) -> h (f b) -> h (g b) -> h c
+                              -- here c can be Product fb gb, so the function becomes \fb gb -> Product fb gb, or just Product in pointfree
+                              lift2 Product (traverse ahb f) (traverse ahb g)
+            
 
 -- | The `Coproduct` data type contains one value from either of the two type constructors.
 data Coproduct f g a =
@@ -104,11 +111,13 @@ data Coproduct f g a =
 instance (Functor f, Functor g) =>
   Functor (Coproduct f g) where
 -- Implement the (<$>) function for a Functor instance for Coproduct
-  (<$>) =
-    error "todo: Course.Traversable (<$>)#instance (Coproduct f g)"
+  (<$>) :: (Functor f, Functor g) => (a -> b) -> Coproduct f g a -> Coproduct f g b
+  (<$>) ab (InL fa) = InL (ab <$> fa)
+  (<$>) ab (InR ga) = InR (ab <$> ga)
 
 instance (Traversable f, Traversable g) =>
   Traversable (Coproduct f g) where
 -- Implement the traverse function for a Traversable instance for Coproduct
-  traverse =
-    error "todo: Course.Traversable traverse#instance (Coproduct f g)"
+  traverse :: (Applicative h, Functor f, Functor g) => (a -> h b) -> Coproduct f g a -> h (Coproduct f g b)
+  traverse ahb (InL fa) = InL <$> traverse ahb fa 
+  traverse ahb (InR ga) = InR <$> traverse ahb ga
