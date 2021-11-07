@@ -197,7 +197,7 @@ setFocus ::
   a
   -> ListZipper a
   -> ListZipper a
-setFocus a (ListZipper l _ r) = ListZipper l a r
+setFocus = withFocus . const
 
 -- A flipped infix alias for `setFocus`. This allows:
 --
@@ -452,8 +452,9 @@ moveLeftN' ::
   Int
   -> ListZipper a
   -> Either Int (ListZipper a)
-moveLeftN' =
-  error "todo: Course.ListZipper#moveLeftN'"
+moveLeftN' n lz = case moveLeftN n lz of
+                        IsNotZ -> Left $ (length . lefts) lz
+                        IsZ l -> Right l
 
 -- | Move the focus right the given number of positions. If the value is negative, move left instead.
 -- If the focus cannot be moved, the given number of times, return the value by which it can be moved instead.
@@ -476,8 +477,9 @@ moveRightN' ::
   Int
   -> ListZipper a
   -> Either Int (ListZipper a)
-moveRightN' =
-  error "todo: Course.ListZipper#moveRightN'"
+moveRightN' n lz = case moveRightN n lz of
+                          IsNotZ -> Left $ (length . rights) lz
+                          IsZ l -> Right l
 
 -- | Move the focus to the given absolute position in the zipper. Traverse the zipper only to the extent required.
 --
@@ -493,8 +495,11 @@ nth ::
   Int
   -> ListZipper a
   -> MaybeListZipper a
-nth =
-  error "todo: Course.ListZipper#nth"
+nth n lz = if n < 0 
+           then IsNotZ 
+           else case moveLeftN' n lz of
+             Left a -> moveRightN (n - a) lz
+             Right (ListZipper l _ _) -> moveLeftN (length l) lz
 
 -- | Return the absolute position of the current focus in the zipper.
 --
