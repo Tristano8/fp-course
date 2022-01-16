@@ -357,14 +357,18 @@ illionate =
         ""
       space x =
         ' ' :. x
+      -- Return accumulator if illions are exhausted
       todigits acc _ Nil =
         acc
       todigits _ Nil _ =
         error "unsupported illion"
+      -- Skip 'illions' with only zeroes
       todigits acc (_:.is) (Zero:.Zero:.Zero:.t) =
         todigits acc is t
+      -- append the 'illion' to the corresponding three digit number
       todigits acc (i:.is) (q:.r:.s:.t) =
         todigits ((showDigit3 (D3 s r q) ++ space i) :. acc) is t
+      -- for numbers that aren't mod 3
       todigits acc (_:.is) (Zero:.Zero:.t) =
         todigits acc is t
       todigits acc (i:._) (r:.s:._) =
