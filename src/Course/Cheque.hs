@@ -187,7 +187,7 @@ data Digit =
   | Seven
   | Eight
   | Nine
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, Show)
 
 showDigit ::
   Digit
@@ -219,6 +219,26 @@ data Digit3 =
   | D2 Digit Digit
   | D3 Digit Digit Digit
   deriving Eq
+
+
+showDigit3 :: Digit3 -> Chars
+showDigit3 (D1 x) = showDigit x
+showDigit3 (D2 Zero x) = showDigit x
+showDigit3 (D2 One Zero) = "ten"
+showDigit3 (D2 One One) = "eleven"
+showDigit3 (D2 One Two) = "twelve"
+showDigit3 (D2 One x) = showDigit x ++ "teen"
+showDigit3 (D2 Two x) = "twenty" ++ "-" ++ showDigit x
+showDigit3 (D2 Three x) = "thirty" ++ "-" ++ showDigit x
+showDigit3 (D2 Four x) = "forty" ++ "-" ++ showDigit x
+showDigit3 (D2 Five x) = "fifty" ++ "-" ++ showDigit x
+showDigit3 (D2 Six x) = "sixty" ++ "-" ++ showDigit x
+showDigit3 (D2 Seven x) = "seventy" ++ "-" ++ showDigit x
+showDigit3 (D2 Eight x) = "eighty" ++ "-" ++ showDigit x
+showDigit3 (D2 Nine x) = "ninety" ++ "-" ++ showDigit x
+showDigit3 (D3 x Zero Zero) = showDigit x ++ "hundred"
+showDigit3 (D3 x y z) = showDigit x ++ " hundred" ++ " and " ++ showDigit3 (D2 y z)
+
 
 -- Possibly convert a character to a digit.
 fromChar ::
@@ -320,8 +340,57 @@ fromChar _ =
 --
 -- >>> dollars "456789123456789012345678901234567890123456789012345678901234567890.12"
 -- "four hundred and fifty-six vigintillion seven hundred and eighty-nine novemdecillion one hundred and twenty-three octodecillion four hundred and fifty-six septendecillion seven hundred and eighty-nine sexdecillion twelve quindecillion three hundred and forty-five quattuordecillion six hundred and seventy-eight tredecillion nine hundred and one duodecillion two hundred and thirty-four undecillion five hundred and sixty-seven decillion eight hundred and ninety nonillion one hundred and twenty-three octillion four hundred and fifty-six septillion seven hundred and eighty-nine sextillion twelve quintillion three hundred and forty-five quadrillion six hundred and seventy-eight trillion nine hundred and one billion two hundred and thirty-four million five hundred and sixty-seven thousand eight hundred and ninety dollars and twelve cents"
+
+splitAroundDot :: Chars -> (List Digit, Chars)
+splitAroundDot = splitAroundDot' Nil where
+  splitAroundDot' x Nil = (x, Nil)
+  splitAroundDot' x (h:.t) = let move = case fromChar h of
+                                            Full n -> splitAroundDot' . (:.) n
+                                            Empty -> if h == '.' then (,) else splitAroundDot'
+                              in move x t
+
+illionate ::
+  List Digit
+  -> Chars
+illionate =
+  let space "" =
+        ""
+      space x =
+        ' ' :. x
+      todigits acc _ Nil =
+        acc
+      todigits _ Nil _ =
+        error "unsupported illion"
+      todigits acc (_:.is) (Zero:.Zero:.Zero:.t) =
+        todigits acc is t
+      todigits acc (i:.is) (q:.r:.s:.t) =
+        todigits ((showDigit3 (D3 s r q) ++ space i) :. acc) is t
+      todigits acc (_:.is) (Zero:.Zero:.t) =
+        todigits acc is t
+      todigits acc (i:._) (r:.s:._) =
+        (showDigit3 (D2 s r) ++ space i) :. acc
+      todigits acc (_:.is) (Zero:.t) =
+        todigits acc is t
+      todigits acc (i:._) (s:._) =
+        (showDigit3 (D1 s) ++ space i) :. acc
+  in unwords . todigits Nil illion
+
 dollars ::
   Chars
   -> Chars
-dollars =
-  error "todo: Course.Cheque#dollars"
+dollars cs = showValue
+  where
+    (d, c) = splitAroundDot (dropWhile (`notElem` ('.':.listh ['1'..'9'])) cs)
+    showValue = d' ++ " and " ++ c'
+    c' = case listOptional fromChar c of
+      Nil -> "zero cents"
+      (Zero :. One :. Nil) -> "one cent"
+      (a:.b:._) -> showDigit3 (D2 a b) ++ " cents"
+      (a:._) -> showDigit3 (D2 a Zero) ++ " cents"
+
+    d' = case d of
+      Nil -> "zero dollars"
+      (One:.Nil) -> "one dollar"
+      _ -> illionate d ++ " dollars"
+      
+    
