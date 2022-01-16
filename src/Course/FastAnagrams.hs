@@ -14,13 +14,16 @@ fastAnagrams ::
   Chars
   -> FilePath
   -> IO (List Chars)
-fastAnagrams =
-  error "todo: Course.FastAnagrams#fastAnagrams"
+fastAnagrams cs fp = getAllAnagrams <$> readFile fp where
+  getAllAnagrams f = listh . S.toList . S.map ncString $ S.intersection allCharPermutations (allDictWords f)
+  allCharPermutations = setFromList $ NoCaseString <$> permutations cs
+  allDictWords dict = setFromList $ NoCaseString <$> lines dict
+  setFromList = S.fromList . hlist
 
 newtype NoCaseString =
   NoCaseString {
     ncString :: Chars
-  }
+  } deriving Ord
 
 instance Eq NoCaseString where
   (==) = (==) `on` map toLower . ncString
